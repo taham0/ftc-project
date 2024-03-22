@@ -153,11 +153,11 @@ class MainActivity : AppCompatActivity(){
 
                             confirmUpdateDialog.cancel()
 
-                            Toast.makeText(this, "Register succeed!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Registeration succeed!", Toast.LENGTH_SHORT).show()
                         }
 
                 } else if(faceResults.count() > 1) {
-                    Toast.makeText(this, "Multiple face detected!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Multiple faces detected!", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "No face detected!", Toast.LENGTH_SHORT).show()
                 }
