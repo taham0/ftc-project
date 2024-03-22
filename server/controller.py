@@ -1,36 +1,31 @@
-import asyncio
-import websockets
+from modules import Client
 
-async def message_handler(websocket, message):
-    """
-    Handles incoming messages and defines the response.
-    This function can be expanded to include more complex logic
-    based on the message content.
-    """
-    print(f"Received message: {message}")
+class Controller:
+    def __init__(self):
+        self.clients = {}
 
-    # process the client response
-    await process_response(message)
+    async def process_request(self, message):
+        """Process client request."""
+        print(message)
 
-async def client_handler(websocket, path):
-    """
-    Handles client connections. Each client connection invokes this coroutine.
-    It listens for messages from the client and uses the message_handler
-    to process them.
-    """
-    try:
-        async for message in websocket:
-            await message_handler(websocket, message)
-    except websockets.ConnectionClosed:
-        print("Client disconnected")
+    async def register_client(self, websocket):
+        """Register a new client."""
+        client = Client(websocket)
+        self.clients[websocket] = client
 
-async def main():
-    """
-    Starts the WebSocket server and listens for connections.
-    """
-    async with websockets.serve(client_handler, "localhost", 6789):
-        print("Server started on ws://localhost:6789")
-        await asyncio.Future()  # Run forever
+    async def unregister_client(self, websocket):
+        """Unregister a client."""
+        self.clients.pop(websocket, None)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    async def message_handler(self, client, message):
+        """Handle incoming messages."""
+        
+
+    async def client_handler(self, websocket, path):
+        """Manage client connections and messages."""
+        await self.register_client(websocket)
+        try:
+            async for message in websocket:
+                await self.message_handler(self.clients[websocket], message)
+        finally:
+            await self.unregister_client(websocket)
