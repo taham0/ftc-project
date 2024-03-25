@@ -4,7 +4,7 @@ from controller import Controller
 
 async def main():
     # Initialize the Controller with the desired number of rounds and the required number of clients to begin a round
-    rounds = 5
+    rounds = 15
     required_clients = 2
     controller = Controller(rounds, required_clients)
 
