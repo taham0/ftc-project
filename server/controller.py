@@ -30,10 +30,10 @@ class Controller:
     async def start_rounds(self):
         """Start and manage the rounds of requests and responses."""
         for _ in range(self.rounds):
-            print(round)
             self.response_received.clear()
-            # await self.dispatch_requests()
+            await self.dispatch_requests()
             # await self.response_received.wait()
+            self.current_round += 1
 
     async def generate_requests(self):
         """Generate requests for all clients."""
