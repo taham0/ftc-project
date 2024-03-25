@@ -33,8 +33,12 @@ class Controller:
 
     async def message_handler(self, client, message):
         """Process the first response in the current round."""
-        message = json.loads(message)
-        
+        try:
+            message = json.loads(message)
+        except json.JSONDecodeError as e:
+            print(f'JSONDecodeError request not in spec')
+            return
+            
         if self.current_round != message["round"]:
             return
         
