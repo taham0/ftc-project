@@ -3,11 +3,13 @@
 **Request**
 {
   "type": "FR",
-  "blob": img
+  "round": 0
+  "data": img
 }
 
 **Response**
 {
   "type": "FR",
-  "pred": ""
+  "round": 0,
+  "data": img
 }
