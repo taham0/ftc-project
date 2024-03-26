@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:scrollbars="vertical"
+    app:layout_scrollEffect="compress"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Chaotica-client"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.047"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.022" />
+
+    <EditText
+        android:id="@+id/logscrollview"
+        android:layout_width="362dp"
+        android:layout_height="598dp"
+        android:layout_marginTop="8dp"
+        android:editable="false"
+        android:ems="10"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:inputType="text|textMultiLine"
+        android:scrollbars="vertical"
+        android:text="Logs Here"
+        android:textSize="10sp"
+        app:layout_constraintTop_toBottomOf="@+id/textView"
+        tools:layout_editor_absoluteX="12dp" />
+
+    <Button
+        android:id="@+id/disconnectBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="19dp"
+        android:text="Disconnect"
+        app:layout_constraintTop_toBottomOf="@+id/logscrollview"
+        tools:layout_editor_absoluteX="23dp" />
+
+    <Button
+        android:id="@+id/connectBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="96dp"
+        android:layout_marginTop="16dp"
+        android:text="Connect"
+        app:layout_constraintStart_toEndOf="@+id/disconnectBtn"
+        app:layout_constraintTop_toBottomOf="@+id/logscrollview" />
+
+    <TextView
+        android:id="@+id/ipField"
+        android:layout_width="192dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="76dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="106dp"
+        android:layout_marginBottom="9dp"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:focusedByDefault="false"
+        android:text="TextView"
+        app:layout_constraintBottom_toTopOf="@+id/logscrollview"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/textView"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
