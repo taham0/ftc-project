@@ -47,7 +47,6 @@ class Controller:
         if self.current_round != message["round"]:
             log.error(f'Round mismatch: {self.current_round} != {message["round"]}')
             await client.websocket.send("Round val error")
-            import ipdb; ipdb.set_trace()
             return
         
         if not self.response_received.is_set():
