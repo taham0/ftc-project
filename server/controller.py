@@ -2,6 +2,10 @@ import asyncio
 from client import Client
 import websockets
 import json
+import logging
+
+log = logging.getLogger("Controller")
+log.setLevel(logging.INFO)
 
 class Controller:
     def __init__(self, rounds, required_clients):
@@ -33,35 +37,38 @@ class Controller:
 
     async def message_handler(self, client, message):
         """Process the first response in the current round."""
+        log.debug(f'Received message from {client.id}')
         try:
             message = json.loads(message)
         except json.JSONDecodeError as e:
-            print(f'JSONDecodeError request not in spec')
+            log.info('JSONDecodeError request not in spec')
             return
             
         if self.current_round != message["round"]:
+            log.error(f'Round mismatch: {self.current_round} != {message["round"]}')
+            await client.websocket.send("Round val error")
+            import ipdb; ipdb.set_trace()
             return
         
-        print(f'Received message from {client.id}')
         if not self.response_received.is_set():
-            print(f'Processed message from {client.id}')
+            log.debug(f'Processed message from {client.id}')
             self.response_received.set()
             await self.process_response(client, message)
 
             return
         
-        print(f'Discarded message from {client.id}')
+        log.info(f'Discarded message from {client.id}')
 
     async def start_rounds(self):
         """Start and manage the rounds of requests and responses."""
         for _ in range(self.rounds):
-            print(f'Starting round {self.current_round}')
+            log.info(f'Starting round {self.current_round}')
 
             self.response_received.clear()
             await self.dispatch_requests(self.current_round)
             await self.response_received.wait()
 
-            print(f'Round {self.current_round} complete.')
+            log.info(f'Round {self.current_round} complete.')
 
             self.current_round += 1
 
@@ -77,7 +84,7 @@ class Controller:
 
     async def process_response(self, client, message):
         """Process a client's response. Processing logic goes here."""
-        # print(f"Received response from {client.id}: {message}")
+        # log.info(f"Received response from {client.id}: {message}")
         pass
         
     async def clear_messages(self):
@@ -95,12 +102,13 @@ class Controller:
         """Manage client connections and messages."""
         await self.register_client(websocket)
         
-        print(f"Client {self.clients[websocket].id} running.")
+        log.info(f"Client {self.clients[websocket].id} running.")
 
         try:
             async for message in websocket:
                 await self.message_handler(self.clients[websocket], message)
         except websockets.exceptions.ConnectionClosedError:
-            print(f"Client {websocket.remote_address} disconnected.")
+            log.info(f"Client {websocket.remote_address} disconnected.")
         finally:
+            log.info(f"Client {self.clients[websocket].id} disconnected.")
             await self.unregister_client(websocket)

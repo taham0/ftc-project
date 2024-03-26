@@ -1,7 +1,11 @@
 import asyncio
 import websockets
+import logging
 from controller import Controller
 
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("websockets").setLevel(logging.INFO)
 async def main():
     # Initialize the Controller with the desired number of rounds and the required number of clients to begin a round
     rounds = 15
