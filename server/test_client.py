@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import json
+import base64
 
 async def hello():
     uri = "ws://localhost:6789"
@@ -8,17 +9,15 @@ async def hello():
     async with websockets.connect(uri) as websocket:
         # wait for server request after connecting
 
-        # testing
-
         while True:
             req = await websocket.recv()
             req = json.loads(req)
 
             print(req)
 
-            if (req["type"] == "FR"):
+            if (req["type"] == "image"):
                 data = {
-                    "type": "FR",
+                    "type": "image",
                     "round": req["round"],
                     "data": req["blob"]
                 }
