@@ -2,14 +2,14 @@
 
 **Request**
 {
-  "type": "FR",
+  "type": "image",
   "round": 0
   "data": img
 }
 
 **Response**
 {
-  "type": "FR",
+  "type": "image",
   "round": 0,
   "data": img
 }
