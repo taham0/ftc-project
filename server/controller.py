@@ -1,5 +1,6 @@
 import asyncio
 from client import Client
+from image_loader import ImageLoader
 import websockets
 import json
 import logging
@@ -8,12 +9,14 @@ log = logging.getLogger("Controller")
 log.setLevel(logging.INFO)
 
 class Controller:
-    def __init__(self, rounds, required_clients):
+    def __init__(self, rounds, required_clients, data_dir):
         self.clients = {}
         self.rounds = rounds
         self.required_clients = required_clients
         self.current_round = 0
         self.response_received = asyncio.Event()
+        self.image_loader = ImageLoader(data_dir)
+        self.image_loader.data_loader()
 
     def create_request(self, type, round, data=None):
         """Create a request object"""
@@ -73,7 +76,8 @@ class Controller:
 
     async def generate_requests(self, round):
         """Generate requests for all clients."""
-        return self.create_request("FR", round)
+        return self.create_request("image", round, self.image_loader.get_image(round))
+        # return self.create_request("image", round)
 
     async def dispatch_requests(self, round):
         """Dispatch the generated requests to each client."""
@@ -83,7 +87,7 @@ class Controller:
 
     async def process_response(self, client, message):
         """Process a client's response. Processing logic goes here."""
-        # log.info(f"Received response from {client.id}: {message}")
+        log.info(f"Received response from {client.id}: {message}")
         pass
         
     async def clear_messages(self):
