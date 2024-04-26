@@ -7,8 +7,6 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 
-import org.w3c.dom.Node;
-
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -105,6 +103,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         logstv = findViewById(R.id.logscrollview);
+
+        //Make logs tv non editable
+        logstv.setFocusable(false);
+        logstv.setClickable(false);
+        logstv.setFocusableInTouchMode(false);
+        logstv.setLongClickable(false);
+
 
         // Set the local IP address
         TextView ipField = findViewById(R.id.ipField);
