@@ -23,11 +23,8 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Build.VERSION;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Pair;
 import android.view.MenuInflater;
@@ -39,62 +36,43 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.gms.common.annotation.KeepName;
-import com.google.mlkit.common.model.LocalModel;
 import com.google.mlkit.vision.demo.BitmapUtils;
 import com.google.mlkit.vision.demo.GraphicOverlay;
 import com.google.mlkit.vision.demo.R;
 import com.google.mlkit.vision.demo.VisionImageProcessor;
-import com.google.mlkit.vision.demo.java.barcodescanner.BarcodeScannerProcessor;
-import com.google.mlkit.vision.demo.java.facedetector.FaceDetectorProcessor;
-import com.google.mlkit.vision.demo.java.facemeshdetector.FaceMeshDetectorProcessor;
 import com.google.mlkit.vision.demo.java.labeldetector.LabelDetectorProcessor;
-import com.google.mlkit.vision.demo.java.objectdetector.ObjectDetectorProcessor;
-import com.google.mlkit.vision.demo.java.posedetector.PoseDetectorProcessor;
-import com.google.mlkit.vision.demo.java.segmenter.SegmenterProcessor;
-import com.google.mlkit.vision.demo.java.subjectsegmenter.SubjectSegmenterProcessor;
-import com.google.mlkit.vision.demo.java.textdetector.TextRecognitionProcessor;
-import com.google.mlkit.vision.demo.preference.PreferenceUtils;
 import com.google.mlkit.vision.demo.preference.SettingsActivity;
-import com.google.mlkit.vision.label.custom.CustomImageLabelerOptions;
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
-import com.google.mlkit.vision.objects.custom.CustomObjectDetectorOptions;
-import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
-import com.google.mlkit.vision.pose.PoseDetectorOptionsBase;
-import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
-import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions;
-import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
-import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
+import okhttp3.Request;
+import okhttp3.WebSocket;
+import okio.ByteString;
 
 /** Activity demonstrating different image detector features with a still image from camera. */
 @KeepName
 public final class StillImageActivity extends AppCompatActivity {
 
-  private static final String TAG = "StillImageActivity";
+  private static final String TAG = "ImageRecognition";
 
   private static final String OBJECT_DETECTION = "Object Detection";
-  private static final String OBJECT_DETECTION_CUSTOM = "Custom Object Detection";
-  private static final String CUSTOM_AUTOML_OBJECT_DETECTION =
-      "Custom AutoML Object Detection (Flower)";
-  private static final String FACE_DETECTION = "Face Detection";
-  private static final String BARCODE_SCANNING = "Barcode Scanning";
   private static final String IMAGE_LABELING = "Image Labeling";
-  private static final String IMAGE_LABELING_CUSTOM = "Custom Image Labeling (Birds)";
-  private static final String CUSTOM_AUTOML_LABELING = "Custom AutoML Image Labeling (Flower)";
-  private static final String POSE_DETECTION = "Pose Detection";
-  private static final String SELFIE_SEGMENTATION = "Selfie Segmentation";
-  private static final String TEXT_RECOGNITION_LATIN = "Text Recognition Latin";
-  private static final String TEXT_RECOGNITION_CHINESE = "Text Recognition Chinese";
-  private static final String TEXT_RECOGNITION_DEVANAGARI = "Text Recognition Devanagari";
-  private static final String TEXT_RECOGNITION_JAPANESE = "Text Recognition Japanese";
-  private static final String TEXT_RECOGNITION_KOREAN = "Text Recognition Korean";
-  private static final String FACE_MESH_DETECTION = "Face Mesh Detection (Beta)";
-  private static final String SUBJECT_SEGMENTATION = "Subject Segmentation (Beta)";
 
   private static final String SIZE_SCREEN = "w:screen"; // Match screen width
   private static final String SIZE_1024_768 = "w:1024"; // ~1024*768 in a normal ratio
@@ -118,6 +96,78 @@ public final class StillImageActivity extends AppCompatActivity {
   private int imageMaxWidth;
   private int imageMaxHeight;
   private VisionImageProcessor imageProcessor;
+
+
+  // Custom
+  private static final String WS_URL = "ws://10.0.2.2:6789";
+  private static final int CLOSE_CODE = 1000;
+//  TextView logstv;
+  OkHttpClient client;
+  OkHttpClient client_main;
+  WebSocket ws;
+  WebSocket ws_main;
+  boolean disconnected = false;
+
+  public void sendBinaryMessage(WebSocket webSocket, ByteString bytes) {
+    if (webSocket != null) {
+      webSocket.send(bytes);
+    }
+  }
+
+  // I know this is not the best way to do this, but it's just a PoC
+  // Easier to check relevant logs on display when running standalone mode.
+  private void logAppend(String message) {
+    runOnUiThread(() -> {
+//      logstv.append(message + "\n");
+      Log.d(TAG, message);
+    });
+  }
+
+  public void sendCommand(WebSocket webSocket, String command, int params, byte[] data) {
+    logAppend("Sending command: " + command + " with params: " + params);
+    if (webSocket != null) {
+
+      // Encode data to base64
+      String encoded = java.util.Base64.getEncoder().encodeToString(data);
+      String commandMessage = String.format("{\"type\": \"%s\", \"round\": \"%d\", \"data\": \"%s\"}", command, params, encoded);
+      webSocket.send(commandMessage);
+      logAppend("Command sent: " + commandMessage);
+    }
+    else {
+      logAppend("WebSocket is null!");
+    }
+  }
+
+  public void connectWs() {
+    logAppend("Starting the WebSocket connection!");
+    client = new OkHttpClient.Builder()
+            .protocols(Arrays.asList(Protocol.HTTP_1_1))
+            .build();
+    Request request = new Request.Builder().url("ws://10.0.2.2:6789").build();
+    NodeWSListener listener = new NodeWSListener();
+    ws = client.newWebSocket(request, listener);
+
+    sendCommand(ws, "FR", 1, new byte[]{0x01, 0x02, 0x03});
+  }
+
+  public String getLocalIpAddress() {
+    try {
+      for (Enumeration<NetworkInterface> en = NetworkInterface
+              .getNetworkInterfaces(); en.hasMoreElements();) {
+        NetworkInterface intf = en.nextElement();
+        for (Enumeration<InetAddress> enumIpAddr = intf
+                .getInetAddresses(); enumIpAddr.hasMoreElements();) {
+          InetAddress inetAddress = enumIpAddr.nextElement();
+          if (!inetAddress.isLoopbackAddress() && inetAddress instanceof java.net.Inet4Address) {
+            return String.format("IP: %s",inetAddress.getHostAddress().toString());
+          }
+        }
+      }
+    } catch (SocketException ex) {
+      Log.e(TAG, "Exception in Get IP Address: " + ex.toString());
+    }
+    return null;
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -176,6 +226,28 @@ public final class StillImageActivity extends AppCompatActivity {
               }
             });
 
+    Switch connectsw = findViewById(R.id.connect_switch);
+    connectsw.setOnCheckedChangeListener((buttonView, isChecked) -> {
+      if (isChecked) {
+        connectWs();
+        disconnected = false;
+      } else {
+        if(disconnected == true) {
+          logAppend("Worker already disconnected!\n");
+          return;
+        }
+        boolean closed = ws.close(CLOSE_CODE, "User requested disconnect");
+        if (closed) {
+          logAppend("Worker disconnected!\n");
+        }
+        else {
+          logAppend("Worker failed to disconnect!\n");
+        }
+        client.dispatcher().executorService().shutdown();
+        disconnected = true;
+      }
+    });
+
     ImageView settingsButton = findViewById(R.id.settings_button);
     settingsButton.setOnClickListener(
         v -> {
@@ -213,25 +285,7 @@ public final class StillImageActivity extends AppCompatActivity {
   private void populateFeatureSelector() {
     Spinner featureSpinner = findViewById(R.id.feature_selector);
     List<String> options = new ArrayList<>();
-    options.add(OBJECT_DETECTION);
-    options.add(OBJECT_DETECTION_CUSTOM);
-    options.add(CUSTOM_AUTOML_OBJECT_DETECTION);
-    options.add(FACE_DETECTION);
-    options.add(BARCODE_SCANNING);
     options.add(IMAGE_LABELING);
-    options.add(IMAGE_LABELING_CUSTOM);
-    options.add(CUSTOM_AUTOML_LABELING);
-    options.add(POSE_DETECTION);
-    options.add(SELFIE_SEGMENTATION);
-    options.add(TEXT_RECOGNITION_LATIN);
-    options.add(TEXT_RECOGNITION_CHINESE);
-    options.add(TEXT_RECOGNITION_DEVANAGARI);
-    options.add(TEXT_RECOGNITION_JAPANESE);
-    options.add(TEXT_RECOGNITION_KOREAN);
-    options.add(FACE_MESH_DETECTION);
-    if (VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-      options.add(SUBJECT_SEGMENTATION);
-    }
 
     // Creating adapter for featureSpinner
     ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this, R.layout.spinner_style, options);
@@ -413,130 +467,9 @@ public final class StillImageActivity extends AppCompatActivity {
     }
     try {
       switch (selectedMode) {
-        case OBJECT_DETECTION:
-          Log.i(TAG, "Using Object Detector Processor");
-          ObjectDetectorOptions objectDetectorOptions =
-              PreferenceUtils.getObjectDetectorOptionsForStillImage(this);
-          imageProcessor = new ObjectDetectorProcessor(this, objectDetectorOptions);
-          break;
-        case OBJECT_DETECTION_CUSTOM:
-          Log.i(TAG, "Using Custom Object Detector Processor");
-          LocalModel localModel =
-              new LocalModel.Builder()
-                  .setAssetFilePath("custom_models/object_labeler.tflite")
-                  .build();
-          CustomObjectDetectorOptions customObjectDetectorOptions =
-              PreferenceUtils.getCustomObjectDetectorOptionsForStillImage(this, localModel);
-          imageProcessor = new ObjectDetectorProcessor(this, customObjectDetectorOptions);
-          break;
-        case CUSTOM_AUTOML_OBJECT_DETECTION:
-          Log.i(TAG, "Using Custom AutoML Object Detector Processor");
-          LocalModel customAutoMLODTLocalModel =
-              new LocalModel.Builder().setAssetManifestFilePath("automl/manifest.json").build();
-          CustomObjectDetectorOptions customAutoMLODTOptions =
-              PreferenceUtils.getCustomObjectDetectorOptionsForStillImage(
-                  this, customAutoMLODTLocalModel);
-          imageProcessor = new ObjectDetectorProcessor(this, customAutoMLODTOptions);
-          break;
-        case FACE_DETECTION:
-          Log.i(TAG, "Using Face Detector Processor");
-          imageProcessor = new FaceDetectorProcessor(this);
-          break;
-        case BARCODE_SCANNING:
-          imageProcessor = new BarcodeScannerProcessor(this, /* zoomCallback= */ null);
-          break;
-        case TEXT_RECOGNITION_LATIN:
-          if (imageProcessor != null) {
-            imageProcessor.stop();
-          }
-          imageProcessor =
-              new TextRecognitionProcessor(this, new TextRecognizerOptions.Builder().build());
-          break;
-        case TEXT_RECOGNITION_CHINESE:
-          if (imageProcessor != null) {
-            imageProcessor.stop();
-          }
-          imageProcessor =
-              new TextRecognitionProcessor(
-                  this, new ChineseTextRecognizerOptions.Builder().build());
-          break;
-        case TEXT_RECOGNITION_DEVANAGARI:
-          if (imageProcessor != null) {
-            imageProcessor.stop();
-          }
-          imageProcessor =
-              new TextRecognitionProcessor(
-                  this, new DevanagariTextRecognizerOptions.Builder().build());
-          break;
-        case TEXT_RECOGNITION_JAPANESE:
-          if (imageProcessor != null) {
-            imageProcessor.stop();
-          }
-          imageProcessor =
-              new TextRecognitionProcessor(
-                  this, new JapaneseTextRecognizerOptions.Builder().build());
-          break;
-        case TEXT_RECOGNITION_KOREAN:
-          if (imageProcessor != null) {
-            imageProcessor.stop();
-          }
-          imageProcessor =
-              new TextRecognitionProcessor(this, new KoreanTextRecognizerOptions.Builder().build());
-          break;
         case IMAGE_LABELING:
           imageProcessor = new LabelDetectorProcessor(this, ImageLabelerOptions.DEFAULT_OPTIONS);
           break;
-        case IMAGE_LABELING_CUSTOM:
-          Log.i(TAG, "Using Custom Image Label Detector Processor");
-          LocalModel localClassifier =
-              new LocalModel.Builder()
-                  .setAssetFilePath("custom_models/bird_classifier.tflite")
-                  .build();
-          CustomImageLabelerOptions customImageLabelerOptions =
-              new CustomImageLabelerOptions.Builder(localClassifier).build();
-          imageProcessor = new LabelDetectorProcessor(this, customImageLabelerOptions);
-          break;
-        case CUSTOM_AUTOML_LABELING:
-          Log.i(TAG, "Using Custom AutoML Image Label Detector Processor");
-          LocalModel customAutoMLLabelLocalModel =
-              new LocalModel.Builder().setAssetManifestFilePath("automl/manifest.json").build();
-          CustomImageLabelerOptions customAutoMLLabelOptions =
-              new CustomImageLabelerOptions.Builder(customAutoMLLabelLocalModel)
-                  .setConfidenceThreshold(0)
-                  .build();
-          imageProcessor = new LabelDetectorProcessor(this, customAutoMLLabelOptions);
-          break;
-        case POSE_DETECTION:
-          PoseDetectorOptionsBase poseDetectorOptions =
-              PreferenceUtils.getPoseDetectorOptionsForStillImage(this);
-          Log.i(TAG, "Using Pose Detector with options " + poseDetectorOptions);
-          boolean shouldShowInFrameLikelihood =
-              PreferenceUtils.shouldShowPoseDetectionInFrameLikelihoodStillImage(this);
-          boolean visualizeZ = PreferenceUtils.shouldPoseDetectionVisualizeZ(this);
-          boolean rescaleZ = PreferenceUtils.shouldPoseDetectionRescaleZForVisualization(this);
-          boolean runClassification = PreferenceUtils.shouldPoseDetectionRunClassification(this);
-          imageProcessor =
-              new PoseDetectorProcessor(
-                  this,
-                  poseDetectorOptions,
-                  shouldShowInFrameLikelihood,
-                  visualizeZ,
-                  rescaleZ,
-                  runClassification,
-                  /* isStreamMode = */ false);
-          break;
-        case SELFIE_SEGMENTATION:
-          imageProcessor = new SegmenterProcessor(this, /* isStreamMode= */ false);
-          break;
-        case FACE_MESH_DETECTION:
-          imageProcessor = new FaceMeshDetectorProcessor(this);
-          break;
-        case SUBJECT_SEGMENTATION:
-          if (VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            imageProcessor = new SubjectSegmenterProcessor(this);
-            break;
-          }
-          // fall through
         default:
           Log.e(TAG, "Unknown selectedMode: " + selectedMode);
       }
