@@ -18,15 +18,19 @@ package com.google.mlkit.vision.demo.java.labeldetector;
 
 import android.content.Context;
 import android.util.Log;
+
 import androidx.annotation.NonNull;
+
 import com.google.android.gms.tasks.Task;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.demo.GraphicOverlay;
+import com.google.mlkit.vision.demo.java.LabelCallback;
 import com.google.mlkit.vision.demo.java.VisionProcessorBase;
 import com.google.mlkit.vision.label.ImageLabel;
 import com.google.mlkit.vision.label.ImageLabeler;
 import com.google.mlkit.vision.label.ImageLabelerOptionsBase;
 import com.google.mlkit.vision.label.ImageLabeling;
+
 import java.util.List;
 
 /** Custom InputImage Classifier Demo. */
@@ -35,9 +39,11 @@ public class LabelDetectorProcessor extends VisionProcessorBase<List<ImageLabel>
   private static final String TAG = "LabelDetectorProcessor";
 
   private final ImageLabeler imageLabeler;
+  private LabelCallback callback;
 
-  public LabelDetectorProcessor(Context context, ImageLabelerOptionsBase options) {
+  public LabelDetectorProcessor(Context context, ImageLabelerOptionsBase options, LabelCallback callback) {
     super(context);
+    this.callback = callback;
     imageLabeler = ImageLabeling.getClient(options);
   }
 
@@ -57,6 +63,7 @@ public class LabelDetectorProcessor extends VisionProcessorBase<List<ImageLabel>
       @NonNull List<ImageLabel> labels, @NonNull GraphicOverlay graphicOverlay) {
     graphicOverlay.add(new LabelGraphic(graphicOverlay, labels));
     logExtrasForTesting(labels);
+    callback.onLabelCallback(labels);
   }
 
   private static void logExtrasForTesting(List<ImageLabel> labels) {

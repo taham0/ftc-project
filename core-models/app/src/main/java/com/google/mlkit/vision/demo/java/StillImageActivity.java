@@ -24,6 +24,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.util.Pair;
@@ -48,6 +49,7 @@ import com.google.mlkit.vision.demo.R;
 import com.google.mlkit.vision.demo.VisionImageProcessor;
 import com.google.mlkit.vision.demo.java.labeldetector.LabelDetectorProcessor;
 import com.google.mlkit.vision.demo.preference.SettingsActivity;
+import com.google.mlkit.vision.label.ImageLabel;
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
 
 import java.io.IOException;
@@ -67,7 +69,7 @@ import okio.ByteString;
 
 /** Activity demonstrating different image detector features with a still image from camera. */
 @KeepName
-public final class StillImageActivity extends AppCompatActivity {
+public final class StillImageActivity extends AppCompatActivity implements BitmapCallback, LabelCallback {
 
   private static final String TAG = "ImageRecognition";
 
@@ -123,13 +125,13 @@ public final class StillImageActivity extends AppCompatActivity {
     });
   }
 
-  public void sendCommand(WebSocket webSocket, String command, int params, byte[] data) {
-    logAppend("Sending command: " + command + " with params: " + params);
+  public void sendCommand(WebSocket webSocket, String command, int round, byte[] data) {
+    logAppend("Sending command: " + command + " with round: " + round);
     if (webSocket != null) {
 
       // Encode data to base64
       String encoded = java.util.Base64.getEncoder().encodeToString(data);
-      String commandMessage = String.format("{\"type\": \"%s\", \"round\": \"%d\", \"data\": \"%s\"}", command, params, encoded);
+      String commandMessage = String.format("{\"type\": \"%s\", \"round\": %d, \"data\": \"%s\"}", command, round, encoded);
       webSocket.send(commandMessage);
       logAppend("Command sent: " + commandMessage);
     }
@@ -144,10 +146,10 @@ public final class StillImageActivity extends AppCompatActivity {
             .protocols(Arrays.asList(Protocol.HTTP_1_1))
             .build();
     Request request = new Request.Builder().url("ws://10.0.2.2:6789").build();
-    NodeWSListener listener = new NodeWSListener();
+    NodeWSListener listener = new NodeWSListener(this);
     ws = client.newWebSocket(request, listener);
 
-    sendCommand(ws, "FR", 1, new byte[]{0x01, 0x02, 0x03});
+    sendCommand(ws, "FR", 0, new byte[]{0x01, 0x02, 0x03});
   }
 
   public String getLocalIpAddress() {
@@ -174,7 +176,7 @@ public final class StillImageActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
 
     setContentView(R.layout.activity_still_image);
-
+    StrictMode.allowThreadDiskReads();
     findViewById(R.id.select_image_button)
         .setOnClickListener(
             view -> {
@@ -437,6 +439,55 @@ public final class StillImageActivity extends AppCompatActivity {
     }
   }
 
+  private void tryReloadAndDetectInImage(Bitmap bitmap) {
+    Log.d(TAG, "Labelling Image");
+
+    if (SIZE_SCREEN.equals(selectedSize) && imageMaxWidth == 0) {
+      // UI layout has not finished yet, will reload once it's ready.
+      return;
+    }
+
+    Bitmap imageBitmap = bitmap;
+    if (imageBitmap == null) {
+      return;
+    }
+
+    // Clear the overlay first
+    graphicOverlay.clear();
+
+    Bitmap resizedBitmap;
+    if (selectedSize.equals(SIZE_ORIGINAL)) {
+      resizedBitmap = imageBitmap;
+    } else {
+      // Get the dimensions of the image view
+      Pair<Integer, Integer> targetedSize = getTargetedWidthHeight();
+
+      // Determine how much to scale down the image
+      float scaleFactor =
+              max(
+                      (float) imageBitmap.getWidth() / (float) targetedSize.first,
+                      (float) imageBitmap.getHeight() / (float) targetedSize.second);
+
+      resizedBitmap =
+              Bitmap.createScaledBitmap(
+                      imageBitmap,
+                      (int) (imageBitmap.getWidth() / scaleFactor),
+                      (int) (imageBitmap.getHeight() / scaleFactor),
+                      true);
+    }
+
+    preview.setImageBitmap(resizedBitmap);
+
+    if (imageProcessor != null) {
+      graphicOverlay.setImageSourceInfo(
+              resizedBitmap.getWidth(), resizedBitmap.getHeight(), /* isFlipped= */ false);
+      imageProcessor.processBitmap(resizedBitmap, graphicOverlay);
+    } else {
+      Log.e(TAG, "Null imageProcessor, please check adb logs for imageProcessor creation error");
+    }
+    Log.v(TAG, "Image labelled");
+  }
+
   private Pair<Integer, Integer> getTargetedWidthHeight() {
     int targetWidth;
     int targetHeight;
@@ -468,7 +519,7 @@ public final class StillImageActivity extends AppCompatActivity {
     try {
       switch (selectedMode) {
         case IMAGE_LABELING:
-          imageProcessor = new LabelDetectorProcessor(this, ImageLabelerOptions.DEFAULT_OPTIONS);
+          imageProcessor = new LabelDetectorProcessor(this, ImageLabelerOptions.DEFAULT_OPTIONS, this);
           break;
         default:
           Log.e(TAG, "Unknown selectedMode: " + selectedMode);
@@ -481,5 +532,18 @@ public final class StillImageActivity extends AppCompatActivity {
               Toast.LENGTH_LONG)
           .show();
     }
+  }
+
+  @Override
+  public void onBitmapReceived(Bitmap bitmap) {
+    Log.v(TAG, "Bitmap received");
+    runOnUiThread(() -> {
+      tryReloadAndDetectInImage(bitmap);
+    });
+  }
+
+  @Override
+  public void onLabelCallback(List<ImageLabel> labels) {
+    Log.v(TAG, "Labels received");
   }
 }

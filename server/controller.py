@@ -46,7 +46,7 @@ class Controller:
         except json.JSONDecodeError as e:
             log.info('JSONDecodeError request not in spec')
             return
-            
+        
         if self.current_round != message["round"]:
             log.error(f'Round mismatch: {self.current_round} != {message["round"]}')
             await client.websocket.send("Round val error")

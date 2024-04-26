@@ -56,18 +56,6 @@
         </activity>
 
         <activity
-            android:name=".java.LivePreviewActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme">
-        </activity>
-
-        <activity
-            android:name=".java.CameraXLivePreviewActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme">
-        </activity>
-
-        <activity
             android:name=".java.CameraXSourceDemoActivity"
             android:exported="false"
             android:theme="@style/AppTheme">

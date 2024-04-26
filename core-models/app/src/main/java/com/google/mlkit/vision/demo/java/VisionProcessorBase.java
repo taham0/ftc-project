@@ -27,12 +27,14 @@ import android.os.Build.VERSION_CODES;
 import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
+
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
+
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskExecutors;
 import com.google.android.gms.tasks.Tasks;
@@ -51,6 +53,7 @@ import com.google.mlkit.vision.demo.ScopedExecutor;
 import com.google.mlkit.vision.demo.TemperatureMonitor;
 import com.google.mlkit.vision.demo.VisionImageProcessor;
 import com.google.mlkit.vision.demo.preference.PreferenceUtils;
+
 import java.nio.ByteBuffer;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -131,16 +134,15 @@ public abstract class VisionProcessorBase<T> implements VisionImageProcessor {
           /* shouldShowFps= */ false,
           frameStartMs);
       mlImage.close();
-
       return;
     }
-
     requestDetectInImage(
         InputImage.fromBitmap(bitmap, 0),
         graphicOverlay,
         /* originalCameraImage= */ null,
         /* shouldShowFps= */ false,
         frameStartMs);
+
   }
 
   // -----------------Code for processing live preview frame from Camera1 API-----------------------
