@@ -5,9 +5,15 @@ from image_loader import ImageLoader
 import websockets
 import json
 import logging
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 log = logging.getLogger("Controller")
 log.setLevel(logging.INFO)
+
+plt.set_loglevel (level = 'warning')
 
 class Controller:
     def __init__(self, rounds, required_clients, data_dir):
@@ -18,6 +24,8 @@ class Controller:
         self.response_received = asyncio.Event()
         self.image_loader = ImageLoader(data_dir)
         self.image_loader.data_loader()
+        self.start = 0
+        self.latencies = []
 
     def create_request(self, type, round, data=None):
         """Create a request object"""
@@ -75,6 +83,14 @@ class Controller:
             log.info(f'Round {self.current_round} complete.')
 
             self.current_round += 1
+        log.info(f'All rounds complete. Average latency: {sum(self.latencies) / len(self.latencies)}')
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.latencies, marker='o')
+        plt.xlabel('Round')
+        plt.ylabel('Latency (s)')
+        plt.title('Latency per round')
+        plt.grid(True)
+        plt.show()
 
     async def generate_requests(self, round):
         """Generate requests for all clients."""
@@ -84,12 +100,12 @@ class Controller:
     async def dispatch_requests(self, round):
         """Dispatch the generated requests to each client."""
         request = await self.generate_requests(round)
+        self.start = time.time()
         for client in self.clients.values():
             await client.websocket.send(request)
 
     async def process_response(self, client, message):
         """Process a client's response. Processing logic goes here."""
-        log.info(f"Received response from {client.id}: {message}")
         
         match message["type"]:
             case "REG": # Registration message
@@ -97,8 +113,10 @@ class Controller:
             case "LB": # Labels received
                 labels = message["data"]
                 labels = base64.b64decode(labels)
+                elapsed = time.time() - self.start
+                log.info(f"Latency: {elapsed}")
                 log.info(f"Received labels from {client.id}: {labels}")
-
+                self.latencies.append(elapsed)
         pass
         
     async def clear_messages(self):

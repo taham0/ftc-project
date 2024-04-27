@@ -16,7 +16,7 @@ async def main():
     # print(p.get_image())
     
     
-    rounds = 2
+    rounds = 100
     required_clients = 1
     controller = Controller(rounds, required_clients, "../dataset/train/*.jpg")
 
