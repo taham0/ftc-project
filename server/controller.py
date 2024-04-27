@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from client import Client
 from image_loader import ImageLoader
 import websockets
@@ -48,8 +49,9 @@ class Controller:
             return
         
         if self.current_round != message["round"]:
+            log.error(message)
             log.error(f'Round mismatch: {self.current_round} != {message["round"]}')
-            await client.websocket.send("Round val error")
+            await client.websocket.send("{'type': 'error', 'message', 'round mismatch'}")
             return
         
         if not self.response_received.is_set():
@@ -88,6 +90,15 @@ class Controller:
     async def process_response(self, client, message):
         """Process a client's response. Processing logic goes here."""
         log.info(f"Received response from {client.id}: {message}")
+        
+        match message["type"]:
+            case "REG": # Registration message
+                log.info(f"Client {client.id} registered.")
+            case "LB": # Labels received
+                labels = message["data"]
+                labels = base64.b64decode(labels)
+                log.info(f"Received labels from {client.id}: {labels}")
+
         pass
         
     async def clear_messages(self):
