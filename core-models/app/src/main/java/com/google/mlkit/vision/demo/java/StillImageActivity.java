@@ -99,7 +99,7 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
   private int imageMaxHeight;
   private VisionImageProcessor imageProcessor;
 
-
+  private int round = 0;
   // Custom
   private static final String WS_URL = "ws://10.0.2.2:6789";
   private static final int CLOSE_CODE = 1000;
@@ -149,7 +149,7 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
     NodeWSListener listener = new NodeWSListener(this);
     ws = client.newWebSocket(request, listener);
 
-    sendCommand(ws, "FR", 0, new byte[]{0x01, 0x02, 0x03});
+//    sendCommand(ws, "REG", 0, "dev_name".getBytes());
   }
 
   public String getLocalIpAddress() {
@@ -545,5 +545,27 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
   @Override
   public void onLabelCallback(List<ImageLabel> labels) {
     Log.v(TAG, "Labels received");
+    // Convert the labels to a Json string
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (ImageLabel label : labels) {
+      sb.append("{\"label\": \"");
+      sb.append(label.getText());
+      sb.append("\", \"confidence\": ");
+      sb.append(label.getConfidence());
+      sb.append("},");
+    }
+
+    // Remove the last comma
+    if (labels.size() > 0) {
+      sb.deleteCharAt(sb.length() - 1);
+    }
+    sb.append("]");
+    String json = sb.toString();
+    Log.v(TAG, json);
+
+    // Send the labels to the worker
+    sendCommand(ws, "LB", this.round, json.getBytes());
+    this.round++;
   }
 }

@@ -38,6 +38,11 @@ public class NodeWSListener extends WebSocketListener {
             // Decode text as JSON
             JSONObject task = new JSONObject(text);
 
+            if ("error".equals(task.getString("type"))) {
+                Log.e("Worker", "Error received from server: " + task.getString("message"));
+                return;
+            }
+
             // Check if the message type is 'image'
             if ("image".equals(task.getString("type"))) {
                 String base64Image = task.getString("blob");
@@ -49,7 +54,6 @@ public class NodeWSListener extends WebSocketListener {
 
                 callback.onBitmapReceived(bitmap);
 
-                // TODO: Add logic to handle the bitmap image
             } else {
                 Log.v("Worker", "Unsupported type or operation");
             }
