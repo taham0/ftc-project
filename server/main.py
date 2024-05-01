@@ -17,7 +17,7 @@ async def main():
     
     
     rounds = 100
-    required_clients = 1
+    required_clients = 3
     controller = Controller(rounds, required_clients, "../dataset/train/*.jpg")
 
     async with websockets.serve(controller.client_handler, "localhost", 6789):

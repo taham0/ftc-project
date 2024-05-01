@@ -24,7 +24,7 @@ public class NodeWSListener extends WebSocketListener {
 
     @Override
     public void onOpen(WebSocket webSocket, Response response) {
-        Log.v("Worker", "Connected to the server!");
+        Log.v("Worker", "Connected to server!");
     }
 
     // Push all messages to an ChaosEngineHandler Handler abstraction one for chaosEngine and

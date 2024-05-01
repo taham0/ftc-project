@@ -21,11 +21,13 @@ class Controller:
         self.rounds = rounds
         self.required_clients = required_clients
         self.current_round = 0
-        self.response_received = asyncio.Event()
+        self.response_count = 0
+        self.all_responses_received = asyncio.Event()
         self.image_loader = ImageLoader(data_dir)
         self.image_loader.data_loader()
         self.start = 0
         self.latencies = []
+        self.current_result = []
 
     def create_request(self, type, round, data=None):
         """Create a request object"""
@@ -56,16 +58,17 @@ class Controller:
             log.info('JSONDecodeError request not in spec')
             return
         
-        if self.current_round != message["round"]:
-            log.error(message)
+        
+        if self.current_round == message["round"]:
+            self.responses_count += 1
+            log.debug(f'Processed message from {client.id}, total responses: {self.responses_count}')
+            if self.responses_count == self.required_clients:
+                self.all_responses_received.set()
+
+            await self.process_response(client, message)
+        else:
             log.error(f'Round mismatch: {self.current_round} != {message["round"]}')
             await client.websocket.send("{'type': 'error', 'message', 'round mismatch'}")
-            return
-        
-        if not self.response_received.is_set():
-            log.debug(f'Processed message from {client.id}')
-            self.response_received.set()
-            await self.process_response(client, message)
 
             return
         
@@ -76,14 +79,16 @@ class Controller:
         for _ in range(self.rounds):
             log.info(f'Starting round {self.current_round}')
 
-            self.response_received.clear()
+            self.all_responses_received.clear()
+            self.responses_count = 0
             await self.dispatch_requests(self.current_round)
-            await self.response_received.wait()
+            await self.all_responses_received.wait()
 
             log.info(f'Round {self.current_round} complete.')
-
             self.current_round += 1
+
         log.info(f'All rounds complete. Average latency: {sum(self.latencies) / len(self.latencies)}')
+        
         plt.figure(figsize=(10, 5))
         plt.plot(self.latencies, marker='o')
         plt.xlabel('Round')
@@ -114,9 +119,10 @@ class Controller:
                 labels = message["data"]
                 labels = base64.b64decode(labels)
                 elapsed = time.time() - self.start
-                log.info(f"Latency: {elapsed}")
-                log.info(f"Received labels from {client.id}: {labels}")
+                log.info(f"Received labels from {client.id} in {elapsed} seconds. {labels}")
+                self.current_result.append(labels)
                 self.latencies.append(elapsed)
+                # self.current_round += 1
         pass
         
     async def clear_messages(self):
