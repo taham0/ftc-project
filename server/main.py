@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import websockets
 import logging
@@ -15,14 +16,17 @@ async def main():
     
     # print(p.get_image())
     
-    
-    rounds = 100
+
+    mode = sys.argv[1]
+    rounds = 400
     required_clients = 3
-    controller = Controller(rounds, required_clients, "../dataset/train/*.jpg")
+    # controller = Controller(rounds, required_clients, mode, "../dataset/train/*.jpg")
+    controller = Controller(rounds, required_clients, mode, "D:/download/archive/data/cars/*.bmp")
 
     async with websockets.serve(controller.client_handler, "localhost", 6789):
         print("Server started on ws://localhost:6789")
         await asyncio.Future()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

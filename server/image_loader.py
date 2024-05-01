@@ -15,6 +15,7 @@ class ImageLoader:
         
     
     def data_loader(self):
+        logging.info("Loading image data ...")
         for fname in self.file_names:
             try:
                 with Image.open(fname) as img:
@@ -26,7 +27,7 @@ class ImageLoader:
             except Exception as e:
                 logging.info(f"Error reading image {fname}: {e}")
                 
-        logging.info(f"Data loaded successfully.")
+        logging.info("Data loaded successfully.")
 
     def get_image(self, index=0):
         """

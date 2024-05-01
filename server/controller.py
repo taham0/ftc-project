@@ -16,8 +16,11 @@ log.setLevel(logging.INFO)
 plt.set_loglevel (level = 'warning')
 
 class Controller:
-    def __init__(self, rounds, required_clients, data_dir):
+    def __init__(self, rounds, required_clients, mode, data_dir):
         self.clients = {}
+
+        # FCFS, TMR 
+        self.mode = mode
         self.rounds = rounds
         self.required_clients = required_clients
         self.current_round = 0
@@ -28,6 +31,8 @@ class Controller:
         self.start = 0
         self.latencies = []
         self.current_result = []
+
+        self.done_task = False
 
     def create_request(self, type, round, data=None):
         """Create a request object"""
@@ -49,6 +54,16 @@ class Controller:
         """Unregister a client."""
         self.clients.pop(websocket, None)
 
+    async def dotmr(self) -> bool:
+        """Perform TMR logic."""
+        ## Check if atlest 2 responses are the same
+        if self.current_result[0] == self.current_result[1] or self.current_result[0] == self.current_result[2]:
+            return True
+        elif self.current_result[1] == self.current_result[2]:
+            return True
+        else:
+            False
+
     async def message_handler(self, client, message):
         """Process the first response in the current round."""
         log.debug(f'Received message from {client.id}')
@@ -66,13 +81,33 @@ class Controller:
                 self.all_responses_received.set()
 
             await self.process_response(client, message)
+
+            match self.mode:
+                case "fcfs":
+                    # In this case we just take the first response we get and move to the next round
+                    # due to time constraints we receive the next two responses instead of cancelling them
+                    if self.done_task:
+                        return
+                    elapsed = time.time() - self.start
+                    self.latencies.append(elapsed)
+                    self.done_task = True
+                    return
+                case "tmr":
+                    if self.responses_count == self.required_clients:
+                        await self.dotmr()
+                        elapsed = time.time() - self.start
+                        self.latencies.append(elapsed)
+                        return
+                    else:
+                        return
+
         else:
             log.error(f'Round mismatch: {self.current_round} != {message["round"]}')
             await client.websocket.send("{'type': 'error', 'message', 'round mismatch'}")
-
             return
         
         log.info(f'Discarded message from {client.id}')
+
 
     async def start_rounds(self):
         """Start and manage the rounds of requests and responses."""
@@ -85,12 +120,17 @@ class Controller:
             await self.all_responses_received.wait()
 
             log.info(f'Round {self.current_round} complete.')
+            self.done_task = False
             self.current_round += 1
 
         log.info(f'All rounds complete. Average latency: {sum(self.latencies) / len(self.latencies)}')
         
+        # Smoothing the graph
+        # self.latencies = np.convolve(self.latencies, np.ones(10) / 10, mode='valid')
+        
         plt.figure(figsize=(10, 5))
         plt.plot(self.latencies, marker='o')
+
         plt.xlabel('Round')
         plt.ylabel('Latency (s)')
         plt.title('Latency per round')
@@ -118,11 +158,10 @@ class Controller:
             case "LB": # Labels received
                 labels = message["data"]
                 labels = base64.b64decode(labels)
-                elapsed = time.time() - self.start
-                log.info(f"Received labels from {client.id} in {elapsed} seconds. {labels}")
+                
+                log.info(f"Received labels from {client.id} - {labels}")
                 self.current_result.append(labels)
-                self.latencies.append(elapsed)
-                # self.current_round += 1
+
         pass
         
     async def clear_messages(self):
