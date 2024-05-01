@@ -247,6 +247,7 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
         }
         client.dispatcher().executorService().shutdown();
         disconnected = true;
+        this.round = 0;
       }
     });
 
