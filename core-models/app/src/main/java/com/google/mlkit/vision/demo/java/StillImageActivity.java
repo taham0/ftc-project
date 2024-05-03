@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -111,6 +112,7 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
   WebSocket ws_main;
   boolean disconnected = false;
 
+  boolean ChaosMode = true;
   public void sendBinaryMessage(WebSocket webSocket, ByteString bytes) {
     if (webSocket != null) {
       webSocket.send(bytes);
@@ -147,8 +149,8 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
             .connectTimeout(10, TimeUnit.SECONDS)
             .protocols(Arrays.asList(Protocol.HTTP_1_1))
             .build();
-//    Request request = new Request.Builder().url("ws://10.0.2.2:6789").build();
-    Request request = new Request.Builder().url("ws://localhost:6789").build();
+    Request request = new Request.Builder().url("ws://10.0.2.2:6789").build();
+//    Request request = new Request.Builder().url("ws://localhost:6789").build();
     NodeWSListener listener = new NodeWSListener(this);
     ws = client.newWebSocket(request, listener);
 
@@ -546,6 +548,8 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
     });
   }
 
+
+  // Chaos here.
   @Override
   public void onLabelCallback(List<ImageLabel> labels) {
     Log.v(TAG, "Labels received");
@@ -567,6 +571,20 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
     sb.append("]");
     String json = sb.toString();
     Log.v(TAG, json);
+
+    if (this.ChaosMode) {
+      Random rand = new Random();
+      // Generate a random sleep duration under 100ms.
+      long sleepdur = rand.nextInt(100);
+      try {
+        if (rand.nextInt(10) < 8) {
+          Thread.sleep(sleepdur);
+        }
+      } catch (InterruptedException e) {
+        Log.d(TAG, "onLabelCallback: Unable to sleep lmao");
+        throw new RuntimeException(e);
+      }
+    }
 
     // Send the labels to the worker
     sendCommand(ws, "LB", this.round, json.getBytes());

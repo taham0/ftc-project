@@ -40,6 +40,12 @@
         android:layout_height="wrap_content"
         android:text="Connect" />
 
+    <Switch
+        android:id="@+id/chaos_sw"
+        android:layout_width="114dp"
+        android:layout_height="13dp"
+        android:text="chaos" />
+
     <Button
         android:id="@+id/select_image_button"
         android:layout_width="wrap_content"

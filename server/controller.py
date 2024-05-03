@@ -125,14 +125,12 @@ class Controller:
 
         log.info(f'All rounds complete. Average latency: {sum(self.latencies) / len(self.latencies)}')
         
-        # Smoothing the graph
-        # self.latencies = np.convolve(self.latencies, np.ones(10) / 10, mode='valid')
+        # do not cut the axes of the plot start from 0
         
         plt.figure(figsize=(10, 5))
         plt.plot(self.latencies, marker='o')
-
         plt.xlabel('Round')
-        plt.ylabel('Latency (s)')
+        plt.ylabel("Latency (s) Avg:{:.2f}".format(sum(self.latencies)/len(self.latencies)))
         plt.title('Latency per round')
         plt.grid(True)
         plt.show()
@@ -185,7 +183,7 @@ class Controller:
             async for message in websocket:
                 await self.message_handler(self.clients[websocket], message)
         except websockets.exceptions.ConnectionClosedError:
-            log.info(f"Client {websocket.remote_address} disconnected.")
+            log.info(f"Client {websocket.remote_address} disconnected. closed")
         finally:
             log.info(f"Client {self.clients[websocket].id} disconnected.")
             await self.unregister_client(websocket)
