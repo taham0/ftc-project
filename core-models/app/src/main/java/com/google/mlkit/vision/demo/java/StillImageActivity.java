@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
@@ -143,9 +144,11 @@ public final class StillImageActivity extends AppCompatActivity implements Bitma
   public void connectWs() {
     logAppend("Starting the WebSocket connection!");
     client = new OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
             .protocols(Arrays.asList(Protocol.HTTP_1_1))
             .build();
-    Request request = new Request.Builder().url("ws://10.0.2.2:6789").build();
+//    Request request = new Request.Builder().url("ws://10.0.2.2:6789").build();
+    Request request = new Request.Builder().url("ws://localhost:6789").build();
     NodeWSListener listener = new NodeWSListener(this);
     ws = client.newWebSocket(request, listener);
 
